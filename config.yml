@@ -11,7 +11,7 @@ paths:
   # Where the NHSE summary report ZIPs live
   extract_path: "X:/Lyndsey_Analytics & Reporting/3. Reporting Products/3. Statutory & National Returns/MHSDS/4. Data Quality Improvement/mhsds_validation/4.data/extracts"
 
-  # Where zip extracts (aggregation.csv, data_quality.csv etc.) will be unpacked
+  # Where zip extracts (aggregation.csv etc.) will be unpacked
   processed_path: "data/processed"
 
   # Where ETOS and reference tables are stored
@@ -23,7 +23,7 @@ paths:
   # Location of rule YAML files (ETOS‑derived rule library)
   rule_library: "rules"
 
-  # Shiny settings (if you build a UI later)
+  # Shiny settings (if build a UI later)
   shiny_assets: "shiny-app"
 
 # ------------------------------------------------------------
