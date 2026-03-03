@@ -5,9 +5,10 @@
 # ------------------------------------------------------------------------------
 
 suppressPackageStartupMessages({
+  library(dplyr)
   library(fs)
   library(stringr)
-  library(readr)   # only for writing the state file robustly
+  library(readr)   
 })
 
 # ---- Config (adjust paths if needed) ----
@@ -83,16 +84,13 @@ for (zp in new_zips) {
   # List all extracted files and keep only CSVs with desired patterns
   extracted_files <- dir_ls(tmp_dir, recurse = TRUE, type = "file")
   
-  # Match patterns: validation / data_quality (case-insensitive)
+  # Match file type
   keep <- extracted_files[
-#    str_detect(tolower(path_file(extracted_files)), "aggregation") |
-#      str_detect(tolower(path_file(extracted_files)), "data_quality" |
-#      str_detect(tolower(path_file(extracted_files)), "diagnostics" |
-#      str_detect(tolower(path_file(extracted_files)), "validation")
-  str_detect(tolower(path_file(extracted_files)), "aggregation") |
-       str_detect(tolower(path_file(extracted_files)), "diagnostics")
+    str_detect(tolower(path_file(extracted_files)), "aggregation") |
+      str_detect(tolower(path_file(extracted_files)), "data_quality") |
+      str_detect(tolower(path_file(extracted_files)), "diagnostics") |
+      str_detect(tolower(path_file(extracted_files)), "validation")
   ]
-  
   keep_csv <- keep[str_detect(tolower(keep), "\\.csv$")]
   
   if (length(keep_csv) == 0) {
