@@ -109,7 +109,8 @@ testthat::test_dir("tests/")
 
 ## Rule System Overview
 Validation rules are stored as YAML, e.g.:
-`
+
+`r
 - rule_id: MHS00001
   table: MHS000Header
   field: DatSetVer
@@ -118,7 +119,8 @@ Validation rules are stored as YAML, e.g.:
   expression: "is.na(DatSetVer) | DatSetVer == ''"
   help: "Populate with the correct dataset version, e.g., '6.0'"
   impacts: []
-`
+  `
+  
 The pipeline dynamically parses these expressions and applies them to each dataset.
 See /docs/rule_system.md for a full explanation.
 
