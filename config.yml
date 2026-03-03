@@ -1,0 +1,127 @@
+# ============================================================
+# MHSDS VALIDATION ENGINE — CONFIGURATION FILE
+# RAP‑COMPLIANT (Baseline + Recommended Enhancements)
+# ============================================================
+
+# ------------------------------------------------------------
+# 1. FILE PATHS
+# ------------------------------------------------------------
+
+paths:
+  # Where the NHSE summary report ZIPs live
+  extract_path: "X:/Lyndsey_Analytics & Reporting/3. Reporting Products/3. Statutory & National Returns/MHSDS/4. Data Quality Improvement/mhsds_validation/4.data/extracts"
+
+  # Where zip extracts (aggregation.csv, data_quality.csv etc.) will be unpacked
+  processed_path: "data/processed"
+
+  # Where ETOS and reference tables are stored
+  reference_path: "data/reference"
+
+  # Where generated outputs (validation reports, summaries, logs) will be saved
+  outputs_path: "outputs"
+
+  # Location of rule YAML files (ETOS‑derived rule library)
+  rule_library: "rules"
+
+  # Shiny settings (if you build a UI later)
+  shiny_assets: "shiny-app"
+
+# ------------------------------------------------------------
+# 2. DATASET & SPECIFICATION METADATA
+# ------------------------------------------------------------
+
+metadata:
+  dataset_name: "MHSDS"
+  dataset_version: "6.0"          # used in data validity checks
+  etos_version: "6.0 (March 2024)" # version of Technical Output Specification used
+  reporting_timezone: "Europe/London"
+
+# ------------------------------------------------------------
+# 3. REPORTING PERIOD CONFIGURATION
+# ------------------------------------------------------------
+
+reporting_period:
+  # If TRUE, the pipeline infers the period from the ZIP filename (YYYYMM)
+  auto_detect_period: true
+
+  # Manual override (ignored if auto_detect_period = true)
+  start_date: "2024-04-01"
+  end_date: "2024-04-30"
+
+  # Whether to enforce period boundaries from ETOS rules
+  enforce_period_rules: true
+
+# ------------------------------------------------------------
+# 4. VALIDATION ENGINE SETTINGS
+# ------------------------------------------------------------
+
+validation:
+  # Whether to apply only ETOS rules or include Trust-specific rules as well
+  rule_mode: "etos_only"   # options: etos_only | etos_plus_local
+
+  # Normalisation settings for matching validation text
+  text_normalisation:
+    collapse_multiple_spaces: true
+    ignore_case: true
+    strip_punctuation: false   # set TRUE if NHSE text varies widely
+    treat_placeholders_as_equal: true   # e.g., <NHSNumber>
+
+  # Output severity levels to include
+  include_severities:
+    - "Record rejected"
+    - "Warning"
+    - "Severity 1 Warning"
+
+  # Whether to fail the pipeline when unexpected codes appear in NHSE summary reports
+  fail_on_unknown_codes: false
+
+# ------------------------------------------------------------
+# 5. TRUST‑SPECIFIC RULE OVERRIDES (OPTIONAL)
+# ------------------------------------------------------------
+
+trust_rules:
+  enable_local_rules: false     # turn on when you begin adding Trust custom validations
+
+  # Example Trust‑specific rules (leave blank for now)
+  local_rules_path: "rules/local"
+
+  # Example "hard" overrides (e.g., override NHSE logic)
+  overrides:
+    # - code: "MHS00111"
+    #   new_severity: "Warning"
+    #   comment: "Local override for <reason>"
+
+# ------------------------------------------------------------
+# 6. LOGGING SETTINGS
+# ------------------------------------------------------------
+
+logging:
+  log_path: "outputs/logs"
+  log_level: "INFO"     # DEBUG | INFO | WARN | ERROR
+  timestamp_format: "%Y-%m-%d %H:%M:%S"
+
+# ------------------------------------------------------------
+# 7. PIPELINE EXECUTION SETTINGS
+# ------------------------------------------------------------
+
+execution:
+  # Number of threads to use (data.table parallelism)
+  threads: 4
+
+  # Stop the pipeline on first critical failure
+  stop_on_error: true
+
+  # Whether to overwrite existing monthly outputs
+  overwrite_outputs: true
+
+# ------------------------------------------------------------
+# 8. SHINY APPLICATION SETTINGS (OPTIONAL)
+# ------------------------------------------------------------
+
+shiny:
+  enable: false
+  host: "127.0.0.1"
+  port: 3838
+  theme: "default"
+
+# END OF CONFIG
