@@ -66,14 +66,15 @@ mhsdsValidation/
 
 ## 1. Install dependencies
 
-```r
+`r
 install.packages(c(
   "data.table",
   "yaml",
   "lubridate",
   "openxlsx",
   "testthat"
-))```
+))
+`
 
 ## 2. Place input data
 
