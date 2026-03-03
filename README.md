@@ -84,7 +84,7 @@ Reference datasets → data/reference/
 Full details: /docs/reference_data.md.
 
 ## 3. Run the validation pipeline
-```r
+`r
 source("R/run_validations.R")
 
 results <- run_full_validation(
@@ -92,7 +92,8 @@ results <- run_full_validation(
   rules_dir   = "rules/"
 )
 
-export_validation_results(results)```
+export_validation_results(results)
+`
 
 Outputs are written to outputs/:
 
@@ -102,8 +103,9 @@ Log file in outputs/logs/
 
 ## Testing
 Run all tests with:
-```r
-testthat::test_dir("tests/")```
+`r
+testthat::test_dir("tests/")
+`
 
 ## Rule System Overview
 Validation rules are stored as YAML, e.g.:
