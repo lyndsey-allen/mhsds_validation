@@ -1,8 +1,8 @@
 
 # MHSDS Validation
 
-This repository contains a **Reproducible Analytical Pipeline (RAP)** for validating Mental Health Services Data Set (MHSDS) extracts using R.  
-The pipeline is designed to be **automated**, **transparent**, and **fully version-controlled**, supporting all Baseline RAP requirements.
+This repository contains a Reproducible Analytical Pipeline (RAP) for validating Mental Health Services Data Set (MHSDS) extracts using R.  
+The pipeline is designed to be automated, transparent, and fully version-controlled, supporting all Baseline RAP requirements.
 
 
 ## Purpose
