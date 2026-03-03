@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------
-# MHSDS Validation - Load Data
+# MHSDS Validation - Extract zipped data
 # Author: Lyndsey Allen
 # Purpose: Standardised data load for rule engine
 # ------------------------------------------------------------------------------
@@ -8,7 +8,8 @@ suppressPackageStartupMessages({
   library(dplyr)
   library(fs)
   library(stringr)
-  library(readr)   
+  library(readr)
+  library(zip)
 })
 
 # ---- Config (adjust paths if needed) ----
@@ -19,7 +20,7 @@ state_file     <- path(processed_root, ".processed_zips.csv")
 # Ensure output folder exists
 if (!dir_exists(processed_root)) dir_create(processed_root, recurse = TRUE)
 
-# ---- Helper: read/write state of processed ZIPs ----
+# ---- Read/write state of processed ZIPs ----
 read_state <- function() {
   if (file_exists(state_file)) {
     tryCatch(
@@ -35,7 +36,7 @@ write_state <- function(df) {
   readr::write_csv(df, state_file)
 }
 
-# ---- Helper: derive YYYYMM from filename or parent folder ----
+# ---- Derive YYYYMM from filename or parent folder ----
 get_yyyymm <- function(zip_path) {
   # 1) try from file name e.g., "202501 Summary Reports.zip" or "..._202501_..."
   y <- str_extract(path_file(zip_path), "(?<!\\d)(20\\d{2}(0[1-9]|1[0-2]))(?!\\d)")
@@ -50,9 +51,8 @@ get_yyyymm <- function(zip_path) {
   format(Sys.Date(), "%Y%m")
 }
 
-# ---- Find all zip files in extract_root (non-recursive or recursive as needed) ----
-# If your ZIPs are directly under data/extracts, set recurse = FALSE
-zips <- dir_ls(extract_root, recurse = TRUE, type = "file", glob = "*.zip")
+# ---- Find all zip files in extract_root ----
+zips <- dir_ls(extract_root, recurse = FALSE, type = "file", glob = "*.zip")
 
 # Load previously processed zips
 st <- read_state()
@@ -75,55 +75,55 @@ for (zp in new_zips) {
   message("Processing: ", path_file(zp), "  [", yyyymm, "]")
   
   # Create a temp folder to unzip
-  tmp_dir <- path_temp(paste0("mhsds_mvp_", yyyymm, "_", as.integer(runif(1, 1e6, 9e6))))
+  tmp_dir <- tempfile(pattern = paste0("mhsds_", yyyymm, "_"))
   dir_create(tmp_dir)
   
+  
   # Unzip
-  utils::unzip(zp, exdir = tmp_dir)
-  
-  # List all extracted files and keep only CSVs with desired patterns
-  extracted_files <- dir_ls(tmp_dir, recurse = TRUE, type = "file")
-  
-  # Match file type
-  keep <- extracted_files[
-    str_detect(tolower(path_file(extracted_files)), "aggregation") |
-      str_detect(tolower(path_file(extracted_files)), "data_quality") |
-      str_detect(tolower(path_file(extracted_files)), "diagnostics") |
-      str_detect(tolower(path_file(extracted_files)), "validation")
-  ]
-  keep_csv <- keep[str_detect(tolower(keep), "\\.csv$")]
-  
-  if (length(keep_csv) == 0) {
-    message("  - No matching CSVs (validation/data_quality) in this ZIP.")
-    dir_delete(tmp_dir)
-    processed_now[[length(processed_now) + 1]] <- data.frame(zip = zp, yyyymm = yyyymm)
+  tryCatch({
+    zip::unzip(zp, exdir = tmp_dir)
+  }, error = function(e) {
+    message("ERROR during unzip: ", e$message)
     next
+  })
+  
+  Sys.sleep(0.5)  # DELAY allows Windows Defender/OneDrive to release file handles
+  
+# ONLY LOOKS AT TOP LEVEL UNZIPPED CSV
+  extracted_files <- dir_ls(tmp_dir, recurse = FALSE, type = "file")
+  
+  Keep <- extracted_files[
+    str_detect(tolower(path_file(extracted_files)),
+               "aggregation|data_quality|diagnostics|validation") &
+      str_detect(tolower(extracted_files), "\\.csv$")
+  ]
+  
+  if (length(keep) == 0) {
+    message("  - No matching CSVs.")
+  } else {
+    for (src in keep) {
+      out <- path(processed_root, paste0(yyyymm, "_", path_file(src)))
+      file_copy(src, out, overwrite = TRUE)
+      message("  + Saved: ", out)
+    }
   }
   
-  # Copy into processed_root with YYYYMM_ prefix
-  for (src in keep_csv) {
-    base <- path_file(src)
-    out  <- path(processed_root, paste0(yyyymm, "_", base))
-    file_copy(src, out, overwrite = TRUE)
-    message("  + ", path_file(out))
-  }
+  # Cleanup (wrap in try)
+  tryCatch({
+    Sys.sleep(0.2)
+    dir_delete(tmp_dir)
+  }, error = function(e) {
+    message("Temp folder couldn't be deleted; OS may still be locking it.")
+  })
   
-  # Clean temp
-  dir_delete(tmp_dir)
-  
-  processed_now[[length(processed_now) + 1]] <- data.frame(zip = zp, yyyymm = yyyymm)
+  processed_now[[length(processed_now) + 1]] <-
+    tibble(zip = zp, yyyymm = yyyymm)
 }
 
-# ---- Update state file ----
-processed_now_df <- if (length(processed_now)) dplyr::bind_rows(processed_now) else
-  tibble::tibble(zip = character(), yyyymm = character(), processed_at = character())
-
-new_state <- dplyr::bind_rows(st, processed_now_df) %>%
-  dplyr::distinct(zip, .keep_all = TRUE) %>%
-  dplyr::arrange(yyyymm, zip)
+# ---- Update state ----
+new_state <- bind_rows(st, bind_rows(processed_now)) |>
+  distinct(zip, .keep_all = TRUE)
 
 write_state(new_state)
 
-
-message("Done. Extracted CSVs are in: ", processed_root)
-
+message("Done. Extracted CSVs saved to: ", processed_root)
