@@ -57,18 +57,20 @@ if (length(validation_files) == 0 && length(dq_files) == 0) {
 # ------------------------------------------------------------------------------
 
 load_month <- function(path) {
+  
+  # Extract the YYYYMM from the filename (always correct)
   yyyymm <- str_extract(basename(path), "^[0-9]{6}")
   
   df <- readr::read_csv(
     path,
     show_col_types = FALSE,
-    col_types = cols(.default = "c")   # FORCE ALL COLUMNS AS CHARACTER
+    col_types = cols(.default = "c")
   ) |>
     janitor::clean_names() |>
     mutate(
-      month = yyyymm,
-      month_date = as.Date(paste0(month, "01"), "%Y%m%d")
-      )
+      month = yyyymm,                 
+      month_date = as.Date(paste0(yyyymm, "01"), "%Y%m%d")  
+    )
   
   return(df)
 }
