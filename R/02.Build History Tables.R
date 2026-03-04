@@ -79,15 +79,17 @@ load_month <- function(path) {
 
 # LOAD TABLE NAME LOOKUP 
 
-lookup_codes <- read_csv(
+lookup_codes <- readr::read_csv(
   "data/reference/MHSDS_table_names_v6.0.csv",
   show_col_types = FALSE
 ) |>
-  clean_names() |>             
-  rename(
-    code = tbl_code,           
-    description = tbl_desc      
-  )
+  janitor::clean_names() |>             
+  dplyr::rename(
+    lup_code = lup_code,             
+    local_desc = tbl_desc  
+  ) |>
+  dplyr::mutate(lup_code = as.character(lup_code))
+
 
 # DROP UNUSED COLUMNS (keep-list)
 
@@ -111,23 +113,23 @@ if (length(aggregation_files) > 0) {
   
   aggregation_list <- lapply(aggregation_files, load_month_agg)
   
-  aggregation_history <- bind_rows(aggregation_list) |>
-    left_join(lookup_codes, by = "code")
+  aggregation_history <- dplyr::bind_rows(aggregation_list) |>
+    dplyr::mutate(code = as.character(code)) |>   # ensure matching type
+    dplyr::left_join(lookup_codes, by = c("code" = "lup_code"))
   
-  latest_month <- max(aggregation_history$month)
+  latest_month <- max(aggregation_history$month, na.rm = TRUE)
   
-  out_a <- path(
+  out_a <- fs::path(
     history_dir,
     paste0(latest_month, "_aggregation_history_", timestamp, ".csv")
   )
   
   Sys.sleep(0.2)
-  write_csv(aggregation_history, out_a)
+  readr::write_csv(aggregation_history, out_a)
   
   message("Aggregation history saved: ", out_a)
   
 } else {
-  
   message("No aggregation files found — skipping aggregation history.")
 }
 
