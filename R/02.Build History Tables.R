@@ -22,6 +22,9 @@ message("Working directory: ", getwd())
 message("Searching processed files in: ", processed_dir)
 message("Saving history outputs to: ", history_dir)
 
+
+
+
 # ------------------------------------------------------------------------------
 # 1. LIST AND MATCH MONTHLY FILES (MATCH ON BASENAME)
 # ------------------------------------------------------------------------------
@@ -74,6 +77,20 @@ load_month <- function(path) {
 # 3. BUILD AGGREGATION HISTORY
 # ------------------------------------------------------------------------------
 
+# LOAD TABLE NAME LOOKUP 
+
+lookup_codes <- read_csv(
+  "data/reference/MHSDS_table_names_v6.0.csv",
+  show_col_types = FALSE
+) |>
+  clean_names() |>             
+  rename(
+    code = tbl_code,           
+    description = tbl_desc      
+  )
+
+# DROP UNUSED COLUMNS (keep-list)
+
 keep_cols_agg <- c(
   "report_type",
   "description",
@@ -84,25 +101,33 @@ keep_cols_agg <- c(
 )
 
 load_month_agg <- function(path) {
-  load_month(path) |>
+  load_month(path) |>      
     select(any_of(keep_cols_agg))
 }
 
+# BUILD AGGREGATION HISTORY
 
 if (length(aggregation_files) > 0) {
-  aggregation_list <- lapply(aggregation_files, load_month)
-  aggregation_history <- bind_rows(aggregation_list)
+  
+  aggregation_list <- lapply(aggregation_files, load_month_agg)
+  
+  aggregation_history <- bind_rows(aggregation_list) |>
+    left_join(lookup_codes, by = "code")
   
   latest_month <- max(aggregation_history$month)
   
-  out_a <- path(history_dir, 
-                paste0(latest_month,
-                "_aggregation_history_", timestamp, ".csv"))
+  out_a <- path(
+    history_dir,
+    paste0(latest_month, "_aggregation_history_", timestamp, ".csv")
+  )
+  
   Sys.sleep(0.2)
   write_csv(aggregation_history, out_a)
   
   message("Aggregation history saved: ", out_a)
+  
 } else {
+  
   message("No aggregation files found — skipping aggregation history.")
 }
 
@@ -148,7 +173,7 @@ load_month_dia <- function(path) {
 }
 
 if (length(diagnostics_files) > 0) {
-  diagnostics_list <- lapply(diagnostics_files, load_month)
+  diagnostics_list <- lapply(diagnostics_files, load_month_dia)
   diagnostics_history <- bind_rows(diagnostics_list)
   
   latest_month_diagnostics <- max(diagnostics_history$month)
