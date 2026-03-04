@@ -62,7 +62,10 @@ load_month <- function(path) {
     col_types = cols(.default = "c")   # FORCE ALL COLUMNS AS CHARACTER
   ) |>
     janitor::clean_names() |>
-    mutate(month = yyyymm)
+    mutate(
+      month = yyyymm,
+      month_date = as.Date(paste0(month, "01"), "%Y%m%d")
+      )
   
   return(df)
 }
@@ -71,15 +74,30 @@ load_month <- function(path) {
 # 3. BUILD AGGREGATION HISTORY
 # ------------------------------------------------------------------------------
 
+keep_cols_agg <- c(
+  "report_type",
+  "description",
+  "code",
+  "numerator",
+  "month",
+  "month_date"
+)
+
+load_month_agg <- function(path) {
+  load_month(path) |>
+    select(any_of(keep_cols_agg))
+}
+
+
 if (length(aggregation_files) > 0) {
   aggregation_list <- lapply(aggregation_files, load_month)
-  
   aggregation_history <- bind_rows(aggregation_list)
   
   latest_month <- max(aggregation_history$month)
   
   out_a <- path(history_dir, 
-                paste0(latest_month, "_aggregation_history_", timestamp, ".csv"))
+                paste0(latest_month,
+                "_aggregation_history_", timestamp, ".csv"))
   Sys.sleep(0.2)
   write_csv(aggregation_history, out_a)
   
@@ -98,9 +116,10 @@ if (length(dq_files) > 0) {
   dq_history <- bind_rows(dq_list)
   
   latest_month_dq <- max(dq_history$month)
-  
-  out_q <- path(history_dir, paste0(latest_month_dq,
-                                    "_data_quality_history_", timestamp, ".csv"))
+
+  out_q <- path(history_dir, 
+                paste0(latest_month_dq,
+                "_data_quality_history_", timestamp, ".csv"))
   Sys.sleep(0.2)
   write_csv(dq_history, out_q)
   
@@ -113,15 +132,30 @@ if (length(dq_files) > 0) {
 # 5. BUILD DIAGNOSTICS HISTORY
 # ------------------------------------------------------------------------------
 
+keep_cols_dia <- c(
+  "report_type",
+  "description",
+  "code",
+  "numerator",
+  "denominator",
+  "month",
+  "month_date"
+  
+)
+
+load_month_dia <- function(path) {
+  load_month(path) |> select(any_of(keep_cols_dia))
+}
+
 if (length(diagnostics_files) > 0) {
   diagnostics_list <- lapply(diagnostics_files, load_month)
-  
   diagnostics_history <- bind_rows(diagnostics_list)
   
   latest_month_diagnostics <- max(diagnostics_history$month)
   
-  out_d <- path(history_dir, paste0(latest_month_diagnostics,
-                                    "_diagnostics_history_", timestamp, ".csv"))
+  out_d <- path(history_dir, 
+                paste0(latest_month_diagnostics,
+                "_diagnostics_history_", timestamp, ".csv"))
   Sys.sleep(0.2)
   write_csv(diagnostics_history, out_d)
   
@@ -140,9 +174,10 @@ if (length(validation_files) > 0) {
   validation_history <- bind_rows(validation_list)
   
   latest_month_validation <- max(validation_history$month)
-  
-  out_v <- path(history_dir, paste0(latest_month_validation,
-                                    "_validation_history_", timestamp, ".csv"))
+
+  out_v <- path(history_dir, 
+                paste0(latest_month_validation,
+                "_validation_history_", timestamp, ".csv"))
   Sys.sleep(0.2)
   write_csv(validation_history, out_v)
   
