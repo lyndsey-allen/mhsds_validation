@@ -200,7 +200,7 @@ if (length(dq_files) > 0) {
   
   out_d <- path(history_dir, 
                 paste0(latest_month_dq,
-                       "_dq_history_", timestamp, ".csv"))
+                       "_data_quality_history_", timestamp, ".csv"))
   Sys.sleep(0.2)
   write_csv(dq_history, out_d)
   
