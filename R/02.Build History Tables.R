@@ -135,27 +135,7 @@ if (length(aggregation_files) > 0) {
   message("No aggregation files found — skipping aggregation history.")
 }
 
-# ------------------------------------------------------------------------------
-# 4. BUILD DATA QUALITY HISTORY
-# ------------------------------------------------------------------------------
 
-if (length(dq_files) > 0) {
-  dq_list <- lapply(dq_files, load_month)
-  
-  dq_history <- bind_rows(dq_list)
-  
-  latest_month_dq <- max(dq_history$month)
-
-  out_q <- path(history_dir, 
-                paste0(latest_month_dq,
-                "_data_quality_history_", timestamp, ".csv"))
-  Sys.sleep(0.2)
-  write_csv(dq_history, out_q)
-  
-  message("Data quality history saved: ", out_q)
-} else {
-  message("No data quality files found — skipping data quality history.")
-}
 
 # ------------------------------------------------------------------------------
 # 5. BUILD DIAGNOSTICS HISTORY
@@ -194,7 +174,43 @@ if (length(diagnostics_files) > 0) {
 }
 
 # ------------------------------------------------------------------------------
-# 6. BUILD VALIDATION HISTORY
+# 5. BUILD DATA QUALITY HISTORY
+# ------------------------------------------------------------------------------
+
+keep_cols_dq <- c(
+  "report_type",
+  "description",
+  "code",
+  "numerator",
+  "denominator",
+  "month",
+  "month_date"
+  
+)
+
+load_month_dq <- function(path) {
+  load_month(path) |> select(any_of(keep_cols_dq))
+}
+
+if (length(dq_files) > 0) {
+  dq_list <- lapply(dq_files, load_month_dq)
+  dq_history <- bind_rows(dq_list)
+  
+  latest_month_dq <- max(dq_history$month)
+  
+  out_d <- path(history_dir, 
+                paste0(latest_month_dq,
+                       "_dq_history_", timestamp, ".csv"))
+  Sys.sleep(0.2)
+  write_csv(dq_history, out_d)
+  
+  message("DQ history saved: ", out_d)
+} else {
+  message("No dq files found — skipping dq history.")
+}
+
+# ------------------------------------------------------------------------------
+# 7. BUILD VALIDATION HISTORY
 # ------------------------------------------------------------------------------
 
 if (length(validation_files) > 0) {
