@@ -13,7 +13,7 @@ suppressPackageStartupMessages({
 })
 
 # ---- Config (adjust paths if needed) ----
-extract_root   <- "data/extracts"    # where monthly ZIPs arrive
+extract_root   <- "data/data_in"    # where monthly ZIPs arrive
 processed_root <- "data/processed"   # where extracted + prefixed CSVs go
 state_file     <- path(processed_root, ".processed_zips.csv")
 
