@@ -22,6 +22,9 @@ message("Working directory: ", getwd())
 message("Searching processed files in: ", processed_dir)
 message("Saving history outputs to: ", history_dir)
 
+
+
+
 # ------------------------------------------------------------------------------
 # 1. LIST AND MATCH MONTHLY FILES (MATCH ON BASENAME)
 # ------------------------------------------------------------------------------
@@ -54,18 +57,20 @@ if (length(validation_files) == 0 && length(dq_files) == 0) {
 # ------------------------------------------------------------------------------
 
 load_month <- function(path) {
+  
+  # Extract the YYYYMM from the filename (always correct)
   yyyymm <- str_extract(basename(path), "^[0-9]{6}")
   
   df <- readr::read_csv(
     path,
     show_col_types = FALSE,
-    col_types = cols(.default = "c")   # FORCE ALL COLUMNS AS CHARACTER
+    col_types = cols(.default = "c")
   ) |>
     janitor::clean_names() |>
     mutate(
-      month = yyyymm,
-      month_date = as.Date(paste0(month, "01"), "%Y%m%d")
-      )
+      month = yyyymm,                 
+      month_date = as.Date(paste0(yyyymm, "01"), "%Y%m%d")  
+    )
   
   return(df)
 }
@@ -73,6 +78,22 @@ load_month <- function(path) {
 # ------------------------------------------------------------------------------
 # 3. BUILD AGGREGATION HISTORY
 # ------------------------------------------------------------------------------
+
+# LOAD TABLE NAME LOOKUP 
+
+lookup_codes <- readr::read_csv(
+  "data/reference/MHSDS_table_names_v6.0.csv",
+  show_col_types = FALSE
+) |>
+  janitor::clean_names() |>             
+  dplyr::rename(
+    lup_code = lup_code,             
+    local_desc = tbl_desc  
+  ) |>
+  dplyr::mutate(lup_code = as.character(lup_code))
+
+
+# DROP UNUSED COLUMNS (keep-list)
 
 keep_cols_agg <- c(
   "report_type",
@@ -84,49 +105,37 @@ keep_cols_agg <- c(
 )
 
 load_month_agg <- function(path) {
-  load_month(path) |>
+  load_month(path) |>      
     select(any_of(keep_cols_agg))
 }
 
+# BUILD AGGREGATION HISTORY
 
 if (length(aggregation_files) > 0) {
-  aggregation_list <- lapply(aggregation_files, load_month)
-  aggregation_history <- bind_rows(aggregation_list)
   
-  latest_month <- max(aggregation_history$month)
+  aggregation_list <- lapply(aggregation_files, load_month_agg)
   
-  out_a <- path(history_dir, 
-                paste0(latest_month,
-                "_aggregation_history_", timestamp, ".csv"))
+  aggregation_history <- dplyr::bind_rows(aggregation_list) |>
+    dplyr::mutate(code = as.character(code)) |>   # ensure matching type
+    dplyr::left_join(lookup_codes, by = c("code" = "lup_code"))
+  
+  latest_month <- max(aggregation_history$month, na.rm = TRUE)
+  
+  out_a <- fs::path(
+    history_dir,
+    paste0(latest_month, "_aggregation_history_", timestamp, ".csv")
+  )
+  
   Sys.sleep(0.2)
-  write_csv(aggregation_history, out_a)
+  readr::write_csv(aggregation_history, out_a)
   
   message("Aggregation history saved: ", out_a)
+  
 } else {
   message("No aggregation files found — skipping aggregation history.")
 }
 
-# ------------------------------------------------------------------------------
-# 4. BUILD DATA QUALITY HISTORY
-# ------------------------------------------------------------------------------
 
-if (length(dq_files) > 0) {
-  dq_list <- lapply(dq_files, load_month)
-  
-  dq_history <- bind_rows(dq_list)
-  
-  latest_month_dq <- max(dq_history$month)
-
-  out_q <- path(history_dir, 
-                paste0(latest_month_dq,
-                "_data_quality_history_", timestamp, ".csv"))
-  Sys.sleep(0.2)
-  write_csv(dq_history, out_q)
-  
-  message("Data quality history saved: ", out_q)
-} else {
-  message("No data quality files found — skipping data quality history.")
-}
 
 # ------------------------------------------------------------------------------
 # 5. BUILD DIAGNOSTICS HISTORY
@@ -148,7 +157,7 @@ load_month_dia <- function(path) {
 }
 
 if (length(diagnostics_files) > 0) {
-  diagnostics_list <- lapply(diagnostics_files, load_month)
+  diagnostics_list <- lapply(diagnostics_files, load_month_dia)
   diagnostics_history <- bind_rows(diagnostics_list)
   
   latest_month_diagnostics <- max(diagnostics_history$month)
@@ -165,7 +174,43 @@ if (length(diagnostics_files) > 0) {
 }
 
 # ------------------------------------------------------------------------------
-# 6. BUILD VALIDATION HISTORY
+# 5. BUILD DATA QUALITY HISTORY
+# ------------------------------------------------------------------------------
+
+keep_cols_dq <- c(
+  "report_type",
+  "description",
+  "code",
+  "numerator",
+  "denominator",
+  "month",
+  "month_date"
+  
+)
+
+load_month_dq <- function(path) {
+  load_month(path) |> select(any_of(keep_cols_dq))
+}
+
+if (length(dq_files) > 0) {
+  dq_list <- lapply(dq_files, load_month_dq)
+  dq_history <- bind_rows(dq_list)
+  
+  latest_month_dq <- max(dq_history$month)
+  
+  out_d <- path(history_dir, 
+                paste0(latest_month_dq,
+                       "_data_quality_history_", timestamp, ".csv"))
+  Sys.sleep(0.2)
+  write_csv(dq_history, out_d)
+  
+  message("DQ history saved: ", out_d)
+} else {
+  message("No dq files found — skipping dq history.")
+}
+
+# ------------------------------------------------------------------------------
+# 7. BUILD VALIDATION HISTORY
 # ------------------------------------------------------------------------------
 
 if (length(validation_files) > 0) {
