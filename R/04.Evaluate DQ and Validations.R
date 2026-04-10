@@ -89,7 +89,7 @@ all_errors <- all_errors %>%
 # 4. Output folder
 # ------------------------------------------------------------------------------
 
-latest_month <- stringr::str_extract(basename(latest_file), "^[0-9]{6}")
+latest_month <- stringr::str_extract(basename(latest_dq_file), "^[0-9]{6}")
 out_dir <- fs::path(out_root, latest_month)
 
 if (!fs::dir_exists(out_dir)) fs::dir_create(out_dir, recurse = TRUE)
@@ -109,11 +109,11 @@ error_summary <- all_errors %>%
     .groups = "drop"
   )
 
-latest_month_safe <- stringr::str_replace_all(latest_month, "[^A-Za-z0-9_]", "_")
+latest_month <- stringr::str_extract(basename(latest_dq_file), "^[0-9]{6}")
 
 out_error_summary <- fs::path(
   out_dir,
-  paste0(latest_month_safe, "_error_summary.csv")
+  paste0(latest_month, "_error_summary.csv")
 )
 
 readr::write_csv(error_summary, out_error_summary)
@@ -174,15 +174,16 @@ message("Created compiled_issues CSV output (FY only): ", out_compiled_issues)
 
 ref_dir <- "data/reference"
 
-all_ref <- fs::dir_ls(ref_dir, type = "file")
+all_ref <- list.files(ref_dir, full.names = TRUE)
 
 ref_files <- all_ref[
-  grepl("^MHSDS_validation_rules_v6\\..*\\.csv$", basename(all_ref))
+  grepl("^MHSDS_validation_rules_v[0-9.]+\\.csv$", basename(all_ref))
 ]
 
 if (length(ref_files) == 0) {
-  stop("No v6.x validation rule CSV found in data/reference")
+  stop("No validation rule CSV found in data/reference")
 }
+
 
 latest_ref_file <- ref_files[which.max(fs::file_info(ref_files)$modification_time)]
 
@@ -318,7 +319,6 @@ ggplot(pareto_data, aes(x = reorder(code, -n), y = n)) +
 # 12. Top 5 Errors to prioritise
 # ------------------------------------------------------------------------------
 
-
 severity_weights <- c(
   "Record rejected" = 1,
   "Severity 1 Warning" = 1,
@@ -332,7 +332,83 @@ top10_priority <- errors_joined %>%
     name = "priority_score", sort = TRUE) %>%
   slice_head(n = 10)
 
-top10_priority
+# ------------------------------------------------------------------------------
+# 13. Top Priorities Report
+# ------------------------------------------------------------------------------
+
+library(openxlsx)
+
+wb <- createWorkbook()
+
+# --- Sheet 1: Summary --------------------------------------------------------
+
+addWorksheet(wb, "Summary")
+writeData(wb, "Summary", "MHSDS Data Quality – Top Priorities Report", startRow = 1)
+addStyle(wb, "Summary",
+         createStyle(fontSize = 16, textDecoration = "bold"),
+         rows = 1, cols = 1)
+
+# Insert headline metrics
+writeData(wb, "Summary", data.frame(
+  Metric = c("Total Errors", "Distinct Error Codes"),
+  Value = c(nrow(errors_joined), dplyr::n_distinct(errors_joined$code))
+), startRow = 3)
+
+# --- Sheet 2: Top Priorities -------------------------------------------------
+
+addWorksheet(wb, "Top 10 Priorities")
+writeData(wb, "Top 10 Priorities", "MHSDS Data Quality – Top 10 Priorities", startRow = 1)
+addStyle(wb, "Top 10 Priorities",
+         createStyle(fontSize = 16, textDecoration = "bold"),
+         rows = 1, cols = 1)
+writeDataTable(wb, "Top 10 Priorities", top10_priority, startRow = 3)
+
+# Formatting
+headerStyle <- createStyle(
+  fgFill = "#003087", fontColour = "white",
+  halign = "center", textDecoration = "bold"
+)
+addStyle(wb, "Top 10 Priorities", headerStyle, rows = 1, cols = 1:ncol(top10_priority), gridExpand = TRUE)
+
+setColWidths(wb, "Top 10 Priorities", cols = 1:ncol(top10_priority), widths = "auto")
+
+# Add conditional formatting on priority score
+conditionalFormatting(
+  wb, sheet = "Top 10 Priorities",
+  cols = ncol(top10_priority),
+  rows = 2:(nrow(top10_priority) + 1),
+  type = "colorScale",
+  style = c("white", "#F8696B")
+)
+
+# --- Sheet 3: Pareto Chart ---------------------------------------------------
+
+addWorksheet(wb, "Pareto Chart")
+
+# Save the plot
+pareto_file <- file.path(tempdir(), "pareto.png")
+ggsave(pareto_file, width = 10, height = 6)
+
+insertImage(wb, "Pareto Chart", pareto_file, startRow = 2, startCol = 1)
+
+# --- Sheet 4: Full Summary ---------------------------------------------------
+
+addWorksheet(wb, "Error Summary")
+writeDataTable(wb, "Error Summary", error_summary)
+setColWidths(wb, "Error Summary", cols = 1:ncol(error_summary), widths = "auto")
+
+# --- Sheet 5: Full Dataset ---------------------------------------------------
+
+addWorksheet(wb, "All Errors")
+writeDataTable(wb, "All Errors", errors_joined)
+setColWidths(wb, "All Errors", cols = 1:ncol(errors_joined), widths = "auto")
+
+# --- Save Workbook -----------------------------------------------------------
+
+output_path <- fs::path(out_dir, paste0(latest_month_safe, "_DQ_priority_report.xlsx"))
+saveWorkbook(wb, output_path, overwrite = TRUE)
+
+message("Created DQ Priority Report workbook: ", output_path)
 
 
 
