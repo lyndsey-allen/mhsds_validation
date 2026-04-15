@@ -64,15 +64,11 @@ new_zips <- setdiff(zips, st$zip)
 if (length(new_zips) == 0) {
   message("No new ZIP files found in: ", extract_root)
   # Do NOT quit the session — just stop this script cleanly:
-  # Option 1: return (when wrapped in a function)
-  # Option 2: use invisible(NULL) or just end the script.
-  # For a top-level script, this is fine:
   if (interactive()) {
     message("Nothing to process; exiting script without closing R.")
   }
   # Simply end the script here:
-  # (No 'quit', no 'stop', just exit this code path)
-} else {
+  } else {
   message("Found ", length(new_zips), " new ZIP(s).")
   # proceed with your loop...
 }
