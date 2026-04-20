@@ -27,9 +27,9 @@ all_errors_fy <- all_errors %>%
 # 1. Load latest data_quality_history & validation_history file from data/history
 # ------------------------------------------------------------------------------
 
-history_dir <- "data/history"
+history_dir <- "A:/MHSDS/4. Data Quality Improvement/mhsds_validation/data/history"
 
-out_root    <- "outputs/dq_validation"
+out_root    <- "A:/MHSDS/4. Data Quality Improvement/mhsds_validation/outputs/dq_validation"
 
 all_hist <- fs::dir_ls(history_dir, type = "file")
 
@@ -172,7 +172,7 @@ message("Created compiled_issues CSV output (FY only): ", out_compiled_issues)
 # 7. Connect Validation Codes to the Master Validation Rules
 # ------------------------------------------------------------------------------
 
-ref_dir <- "data/reference"
+ref_dir <- "A:/MHSDS/4. Data Quality Improvement/mhsds_validation/data/reference"
 
 all_ref <- list.files(ref_dir, full.names = TRUE)
 
