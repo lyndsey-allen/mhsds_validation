@@ -13,8 +13,10 @@ suppressPackageStartupMessages({
 })
 
 # ---- Config (adjust paths if needed) ----
-extract_root   <- "data/data_in"    # where monthly ZIPs arrive
-processed_root <- "data/processed"   # where extracted + prefixed CSVs go
+extract_root   <- "A:/MHSDS/submission/DQMI Reports"  
+# where monthly ZIPs arrive
+processed_root <- "A:/MHSDS/4. Data Quality Improvement/mhsds_validation/data/processed"   
+# where extracted + prefixed CSVs go
 state_file     <- path(processed_root, ".processed_zips.csv")
 
 # Ensure output folder exists
