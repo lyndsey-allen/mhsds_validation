@@ -14,8 +14,8 @@ suppressPackageStartupMessages({
 
 timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
 
-processed_dir <- "data/processed"
-history_dir   <- "data/history"
+processed_dir <- "A:/MHSDS/4. Data Quality Improvement/mhsds_validation/data/processed" 
+history_dir   <- "A:/MHSDS/4. Data Quality Improvement/mhsds_validation/data/history" 
 if (!dir_exists(history_dir)) dir_create(history_dir, recurse = TRUE)
 
 message("Working directory: ", getwd())
